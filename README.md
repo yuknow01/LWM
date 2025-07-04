@@ -11,6 +11,10 @@ datasets:
 - DeepMIMO
 ---
 
+# Modify final_model file
+- separate Unmasked(gru, transformer etc..) and Masked(LWM) 
+
+
 # 📡 **LWM: Large Wireless Model**
 
 **[🚀 Click here to try the Interactive Demo!](https://huggingface.co/spaces/wi-lab/lwm-interactive-demo)**
