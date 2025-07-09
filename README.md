@@ -11,8 +11,14 @@ datasets:
 - DeepMIMO
 ---
 
-# Modify final_model file
-- separate Unmasked(gru, transformer etc..) and Masked(LWM) 
+# Homework
+- Transformer Encoder Decoder adjust
+- do not masked sequence dataset
+- change head layer
+- compare trainable parameters
+- Separate train / val user if all user 737 ehan we can separate 500 train user and 237 test user
+- Or plus new User or We can separeate subcarrier
+- We can preceed 3 option about 1. random train/val 2. separeate train/val 3. separeate subcarrier
 
 
 # 📡 **LWM: Large Wireless Model**
