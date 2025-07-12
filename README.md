@@ -12,13 +12,10 @@ datasets:
 ---
 
 # Homework
-- Transformer Encoder Decoder adjust
-- do not masked sequence dataset
-- change head layer
-- compare trainable parameters
-- Separate train / val user if all user 737 ehan we can separate 500 train user and 237 test user
-- Or plus new User or We can separeate subcarrier
-- We can preceed 3 option about 1. random train/val 2. separeate train/val 3. separeate subcarrier
+- Transformer change the layer 12 -> 6
+- compare the model performance which similar the trainable parameters
+- to make the scene prediction which is 4 train to 5 predict and 14 train and 15 predicct also 10 to 11
+- to make same the train validation ratio
 
 
 # 📡 **LWM: Large Wireless Model**
