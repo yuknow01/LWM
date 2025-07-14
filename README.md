@@ -10,6 +10,8 @@ tags:
 datasets:
 - DeepMIMO
 ---
+# Schedule
+- 2025-7-19 meeting 13:00 or 15:00
 
 # Homework
 - Transformer change the layer 12 -> 6
