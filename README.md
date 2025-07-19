@@ -14,6 +14,8 @@ datasets:
 - 2025-7-19 meeting 13:00 or 15:00
 
 # Homework
+- organize README.md and analyze the dataset size and shape etc
+
 - Transformer change the layer 12 -> 6
 - compare the model performance which similar the trainable parameters
 - to make the scene prediction which is 4 train to 5 predict and 14 train and 15 predicct also 10 to 11
