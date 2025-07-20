@@ -11,7 +11,7 @@ datasets:
 - DeepMIMO
 ---
 # Schedule
-- 2025-7-19 meeting 13:00 or 15:00
+- 2025-7-22 meeting 13:00
 
 # Homework
 - organize README.md and analyze the dataset size and shape etc
