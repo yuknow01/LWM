@@ -111,15 +111,39 @@ class lwm(torch.nn.Module):
         self.decoder = nn.Linear(d_model, n_dim, bias=False)
         self.decoder_bias = nn.Parameter(torch.zeros(n_dim))
 
-    @classmethod
-    def from_pretrained(cls, ckpt_name='model_weights.pth', device='cuda', use_auth_token=None):
-        model = cls().to(device)
+    # @classmethod
+    # def from_pretrained(cls, ckpt_name='model_weights.pth', device='cuda', use_auth_token=None):
+    #     model = cls().to(device)
 
+    #     ckpt_path = ckpt_name
+    #     model.load_state_dict(torch.load(ckpt_path, map_location=device))
+    #     print(f"Model loaded successfully from {ckpt_path} to {device}")
+
+    #     return model
+
+
+    @classmethod
+    def from_pretrained(
+        cls,
+        ckpt_name='model_weights.pth',
+        device='cuda',
+        element_length=ELEMENT_LENGTH,
+        d_model=D_MODEL,
+        max_len=MAX_LEN,
+        n_layers=N_LAYERS
+        ):
+        model = cls(
+            element_length=element_length,
+            d_model=d_model,
+            max_len=max_len,
+            n_layers=n_layers
+        ).to(device)
+        
         ckpt_path = ckpt_name
         model.load_state_dict(torch.load(ckpt_path, map_location=device))
         print(f"Model loaded successfully from {ckpt_path} to {device}")
-
         return model
+
 
     def forward(self, input_ids, masked_pos):
         output = self.embedding(input_ids)
