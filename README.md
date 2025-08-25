@@ -11,7 +11,7 @@ datasets:
 - DeepMIMO
 ---
 # Schedule
-- 2025-7-22 meeting 13:00
+- 2025-8-29 meeting 15:00
 
 # Homework
 - organize README.md and analyze the dataset size and shape etc
@@ -364,3 +364,4 @@ If you have questions or need assistance, feel free to:
 - Visit the [Hugging Face Discussions](https://huggingface.co/wi-lab/lwm/discussions) for community support.
 - Check out the [LWM website FAQ](https://lwm-wireless.net/community).
 - Contact us directly via email at [lwmwireless@gmail.com](mailto:lwmwireless@gmail.com).
+
