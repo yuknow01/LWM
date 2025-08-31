@@ -1,0 +1,33 @@
+Advanced Deep LEarning Models for 6G: Overview, Opportunities, and Challenges
+-> 차세대 이동통신인 6G의 도래 등의 네트워크 지능화에 대한 수요 증가로 확장된 네트워크 환경과 늘어나는 서비스 요구를 해결하기 위한 핵심 과제가 되고 있다.
+위 논문은 딥러닝이 6G에 지능을 부여하는 데 중요한 기술로서, 강력하고 유망한 발전 가능성을 보여주고 있다. 본 논문은 6G에서 딥러닝이 수행하는 핵심적 역할에 대한 종합적 개요를 제공하며, 그 과정에서 나타나는 다양한 기회와 도전을 탐구한다.
+
+Accurate Channel Prediction Based on Transformer: Making Mobility Negligible
+-> 정확한 채널 예측은 빠르게 시간에 따라 변하는 채널에서 발생하는 채널 에이징(Channel aging)문제를 해결하는게 필수적이다. 위 논문에서는 트랜스포머 기반 명렬 채널 예측 기법을 제안한다. 
+
+Real Time Massive MOMP Channel Prediction: A Combination of Deep Learning and NerualProphet
+->채널 상태 정보를 예측하기 위해서 시계열 딥러닝 모델인 RNN과 BiLSTM를 활용하였다.
+
+BERT4MIMO: A Foundation Model using BERT Architecture for MAssive MIMO Channel State Information Prediction
+-> 대규모 MIMO의 고차원 CSI를 BERT 아키텍처로 마스킹 복원(재구성)하는 파운데이션 모델을 제안한다. 
+
+Wifo: wireless foundation model for channel prediction
+-> CSI 예측을 위한 모델로, 그 예측 범위를 STF(시간-공간-주파수) 전역 채널을 위한 최초의 무선 파운데이션 모델 WiFo를 제안 MAE(마스크드오토인코더) 기반 자기기도 사전학습으로 대규모 이질적 CSI를 학습하여 파인튜닝 없이 제로샷 일반화로 다양한 구성의 채널을 통합적으로 예측한다.
+
+내 논문 실험
+-> 다운스트림 채널 예측(시계열 예측)문제
+
+
+
+
+채널 에이징:  무선 통신 환경이 빠르게 변하면서(물체가 고속으로 이동(드론, 고속열차), 주변에 다른 물체가 빠르게 이동(교통량이 많은 도로) ) 송신기가 사용하는 채널 상태 정보(Channel State Information,CSI)가 실제 채널과 일치하지 않아 통신 성능이 떨어지는 현상
+ex)
+1. CSI 측정 및 피드백: 기차(수신기)가 A 위치를 지나면서 송신기에게 현재 채널 상태 정보(CSI)를 보냅니다.
+
+2. 송신기의 처리 지연: 송신기(기지국)는 이 CSI 정보를 받아 분석하고, 이를 바탕으로 가장 효율적인 신호 전송 방식(예: 빔포밍)을 계산하는 데 아주 짧은 시간이 걸립니다.
+
+3. 채널 에이징 발생: 이 계산이 끝났을 때, 기차는 이미 A 위치를 지나 B 위치로 이동한 상태입니다.
+
+4. 신호 전송 및 불일치: 송신기는 '기차는 A에 있다'는 오래된 정보(outdated CSI)를 기반으로 A 위치에 신호를 집중해서 보냅니다. 하지만 실제 기차는 B에 있기 때문에, 신호가 제대로 전달되지 않거나 신호의 세기가 크게 약해져서 통신 성능이 떨어집니다.
+
+채널상태정보(CSI) : 경로 손실(Path Loss) : 송신기와 수신기 간의 거리에 따른 신호의 감쇠 정도, 채널 임펄스 응답(Channel Impulse Response), 도달 방향(Direction of Arrival): 신호가 수신기에 어떤 각도로 도달하는지에 대한 데이터, 다중 안테나 시스템(MIMO)에서 빔포밍을 할 때 필수적인 정보, 비/가시선(N/Los): 직접 or 간접  가시선 경로에 있는지에 대한 상태 	
