@@ -4,7 +4,7 @@
 > **충남대학교 2025 창의SW·AI 축전 창의작품경진대회 출품작**  
 > 참가 부문: 학술 / 개발과제  
 > 팀명: **LWM**  
-> 지도교수: 양희철 교수님  
+> 지도교수: **양희철 교수님**
 
 ---
 
@@ -14,451 +14,203 @@
 **거대무선모델(Large Wireless Model, LWM)** 기반 트랜스포머를 적용한  
 **무선 채널 시계열 예측(Sequential Channel Prediction)** 기술을 제시합니다.
 
-LWM은 채널 마스킹(Masked Channel Modeling, MCM) 방식으로 사전 학습된  
-**파운데이션 모델(Foundation Model)** 구조를 기반으로 하며,  
-RNN 계열(RNN, GRU, LSTM) 및 일반 Transformer 모델과 **NMSE(dB)** 기준으로 성능을 비교하였습니다.
+LWM은 **채널 마스킹(Masked Channel Modeling, MCM)** 으로 사전학습된 **파운데이션 모델**이며,  
+RNN/GRU/LSTM/일반 Transformer와 **NMSE(dB)** 기준 성능을 비교했습니다.
 
 ---
 
-## 🎯 연구 목표 (Objective)
+## 🎯 연구 목표 (Objectives)
 
-- **채널 에이징 문제 해결:** 시간 변화에 따른 예측 정확도 저하 개선  
-- **LWM Transformer 백본 적용:** 대규모 사전학습 모델을 채널 예측에 도입  
-- **성능 비교:** RNN, GRU, LSTM, Transformer vs LWM  
-- **데이터 분할 실험:** 사용자 / 장면 / 서브캐리어 기준 분할  
-- **전이학습(Transfer Learning) 전략 비교:**
-  1. `LWM_Finetune`: 사전학습된 백본 + 미세조정  
-  2. `LWM_Freeze`: 백본 동결 후 출력 헤드만 학습  
-  3. `LWM_FromScratch`: 사전학습 없이 처음부터 학습  
+- 시간 변화로 인한 **채널 에이징 완화**
+- **LWM Transformer 백본**을 채널 예측에 적용
+- **RNN/GRU/LSTM/Transformer vs LWM** 성능 비교
+- **User / Scene / Subcarrier** 기준 **3가지 데이터 분할 실험**
+- 전이학습 전략 비교  
+  1) **LWM_Finetune**: 사전학습 백본 미세조정  
+  2) **LWM_Freeze**: 백본 동결, 출력 헤드만 학습  
+  3) **LWM_FromScratch**: 사전학습 없이 처음부터 학습
 
 ---
 
 ## 🧠 모델 구조 (Model Architecture)
-- Input → Projection → Patch/Positional Embedding → LWM Backbone → Output Head → Prediction
 
+**Input → Projection → Patch/Positional Embedding → LWM Backbone → Output Head → Prediction**
 
-- **Dataset:** DeepMIMO v3 Dynamic Scenario  
-- **Metric:** NMSE(dB)  
-- **Framework:** PyTorch  
-- **Evaluation Splits:** User / Scene / Subcarrier  
+| 항목 | 값 |
+|---|---|
+| **Dataset** | DeepMIMO v3 Dynamic Scenario (`O2_dyn_3p5`) |
+| **Metric** | NMSE (dB) |
+| **Framework** | PyTorch |
+| **Evaluation Splits** | User / Scene / Subcarrier |
+| **Sequence Length** | 14 (과거 14 → 다음 1 예측) |
 
 ---
 
-## ⚙️ 세부 실험 내용 (Experiment Details)
+## ⚙️ 실험 데이터 (Dataset)
 
-LWM은 **DeepMIMO v3** 데이터셋을 기반으로,  
-사전학습된 Transformer 백본을 활용한 시계열 채널 예측 실험을 진행했습니다.  
-각 실험은 동일한 전처리, 학습 조건, 평가 지표(NMSE(dB))를 사용했습니다.
+DeepMIMO v3의 `O2_dyn_3p5` 동적 시나리오를 사용했습니다.
 
-### 🔹 학습 전략별 구성
-| 전략 | 설명 |
-|------|------|
-| **LWM_Finetune** | 사전학습된 백본 사용 + 미세조정 |
-| **LWM_Freeze** | 백본 동결 후 출력 레이어만 학습 |
-| **LWM_FromScratch** | 사전학습 없이 처음부터 학습 |
+| 항목 | 설명 |
+|---|---|
+| 송신 안테나(BS) | 32 |
+| 서브캐리어 | 64 |
+| 사용자(UE) | 737 (예시) |
+
+---
+
+## 🔀 데이터 분할 전략 (Split Strategies)
+
+세 가지 분할 축에서 **일반화 성능**을 평가합니다.
+
+### 1) Scene Split (장면 기반)
+과거 Scene으로 미래 Scene을 예측합니다. (3:1 = 75%:25%)
+
+```python
+seq_len = 14
+split_idx = 26  # 예: 총 44개 Scene → 0~25 Train / 26~43 Val
+train_ds = dataset[:split_idx]
+val_ds   = dataset[split_idx:]
+```
+
+### 2) user split (user 기반)
+유저를 3:1로 분할하고 train에 대해서 추가적으로 아래 더 학습 사용자 비율로 분할 합니다.
+```pyhton
+U = dataset[0][0]['user']['channel'].shape[0]
+user_ids = np.arange(U)
+random.shuffle(user_ids)
+
+cut = int(len(user_ids) * 0.75)          # 75% 학습 도메인
+## 학습 사용자 비율을 아래코드에서 선택 가능
+cut_1pt = max(1, math.floor(cut * 0.01))
+cut_3pt = max(1, math.floor(cut * 0.03))
+cut_5pt = max(1, math.floor(cut * 0.05))
+cut_10pt = max(1, math.floor(cut * 0.1))
+cut_30pt = max(1, math.floor(cut * 0.3))
+cut_50pt = max(1, math.floor(cut * 0.5))
+cut_100pt = cut
+
+train_users = set(user_ids[:cut_50pt])
+val_users   = set(user_ids[cut:])
+```
+
+### 3) subcarrier Split (서브캐리어 분할)
+캐리어를 64개로 분할 한 후 train : val = 3 : 1로 분할하였습니다.
+``` pyhton
+import numpy as np, random
+
+S = dataset[0][0]['user']['channel'].shape[3]  # 예: 64
+sc_ids = np.arange(S)
+random.shuffle(sc_ids)
+
+cut = int(S * 0.75)
+train_sc = set(sc_ids[:cut])
+val_sc   = set(sc_ids[cut:])
+```
+---
+# 🧠 LWM 모델 구조
+Input → Projection → Patch/Positional Embedding → LWM Backbone → Output Head → Prediction
+
+
+## ⚙️ 코드 구조 (Code)
+
+```python
+class LWMWithHead(nn.Module):
+    def __init__(
+        self,
+        input_dim: int,                 # 실제 입력 차원 (예: 64)
+        patch_length: int,              # 백본에서 기대하는 패치 길이 (예: 16)
+        d_model: int = 64,              # LWM의 hidden size
+        max_len: int = 129,             # positional encoding의 최대 길이
+        n_layers: int = 12,             # Transformer encoder 층 수
+        out_dim: int = 64,              # FC head 출력 차원
+        freeze_backbone: bool = True,   # 백본 파라미터 동결 여부
+        checkpoint_path: str | None = "./model_weights.pth",
+        device: str = "cuda"
+    ):
+        super().__init__()
+
+        # 입력을 백본의 patch 크기에 맞게 투영
+        # ⭐ 만일 가중치를 사용하지 않으면 아래 코드는 주석처리 ⭐
+        self.input_proj = nn.Linear(input_dim, patch_length)
+
+        # ⭐ 백본 초기화 (사전학습된 모델 불러오기 or 랜덤 초기화) ⭐
+        if checkpoint_path is None:
+            self.backbone = lwm(
+                element_length=patch_length,
+                d_model=d_model,
+                max_len=max_len,
+                n_layers=n_layers
+            ).to(device)
+        else:
+            self.backbone = lwm.from_pretrained(
+                ckpt_name=checkpoint_path,
+                device=device
+            )
+
+        # 백본 파라미터 동결 (Freeze)
+        if freeze_backbone:
+            for p in self.backbone.parameters():
+                p.requires_grad = False
+
+        # FC Head 구성 (1 layer)
+        self.head = nn.Sequential(
+            nn.Linear(d_model, out_dim),
+        )
+
+    def forward(self, input_ids: torch.Tensor, masked_pos: torch.Tensor) -> torch.Tensor:
+        # ⭐ 만일 가중치를 사용하지 않으면 아래 코드는 주석처리 ⭐
+        x = self.input_proj(input_ids)               # 입력 투영
+        _, enc_output = self.backbone(x, masked_pos) # 백본 통과
+        feat = enc_output[:, 0, :]                   # CLS 토큰 피처 추출
+        out = self.head(feat)                        # FC Head 출력
+        return out
+```
+---
+
+
+
+## 🧠 학습 전략 (Training Strategies)
+
+본 프로젝트에서는 사전학습된 LWM 백본의 활용 여부와 미세조정 범위에 따라  
+다음 세 가지 학습 전략을 비교했습니다.
+
+| 전략명 | 설명 | 학습 범위 |
+|--------|------|-----------|
+| **LWM_Finetune** | 사전학습된 백본을 불러와 전체 파라미터를 미세조정 (Full Fine-tuning) | 백본 + 출력 헤드 |
+| **LWM_Freeze** | 사전학습된 백본을 동결하고, 출력 레이어(헤드)만 학습 | 출력 헤드만 |
+| **LWM_FromScratch** | 사전학습 없이 처음부터 모델을 학습 | 전층 |
+
+> 💡 모든 실험은 동일한 데이터셋(DeepMIMO v3)과 전처리 방식,  
+> 평가 지표(NMSE[dB])를 기준으로 수행되었습니다.
 
 ---
 
 ## 📊 실험 결과 (Results)
 
-| 분할 방식 | 최적 모델 | NMSE(dB) | 주요 특징 |
+| 분할 기준 | 최적 모델 | NMSE(dB) | 주요 특징 |
 |------------|------------|-----------|-------------|
-| **서브캐리어 분할** | LWM_Finetune | **–25.7078 dB** | 주파수 축 일반화 능력 우수 |
-| **장면 분할** | LWM_Finetune | –24.3 dB | 환경 변화에 대한 강건성 |
-| **사용자 분할** | GRU | –23.3986 dB | 시계열 데이터 적응력 우수 |
+| **User Split** | GRU | **–23.40 dB** | 사용자 기반 일반화 우수 |
+| **Scene Split** | LWM_Finetune | –24.30 dB | 시간적 변화에 강건 |
+| **Subcarrier Split** | LWM_Finetune | **–25.71 dB** | 주파수 도메인 적응력 최고 |
 
-### 🔹 추가 분석
-- **데이터 희소 구간 (0.5%~1%)**에서는 LWM이 RNN보다 오히려 **더 높은 효율성**을 보임.  
-- **추론 시간(1 sample 기준)**  
-  - GRU: 약 **0.85~0.91 ms/sample**  
-  - LWM: 약 **14.53~16.51 ms/sample**  
-  → LWM은 느리지만 **데이터 효율성 및 일반화 성능에서 우수함**을 확인.  
+### 🔹 세부 분석
+- **GRU**는 시계열 특화 구조로 사용자 기반 예측(User Split)에서 우수한 성능을 보임.  
+- **LWM**은 소량의 데이터(0.5~1%)에서도 **데이터 효율성(Data Efficiency)** 이 높음.  
+- **추론 시간(1 sample 기준):**  
+  - GRU: 약 **0.85–0.91 ms/sample**  
+  - LWM: 약 **14.5–16.5 ms/sample**  
+  → LWM은 느리지만 **일반화 성능과 예측 안정성**에서 크게 앞섬.
 
 ---
 
 ## 💡 기대 효과 (Expected Impact)
 
-- LWM 기반 파운데이션 모델의 **무선 채널 예측 분야 적용 가능성 검증**  
-- 실제 통신 시스템 적용 시 **연산 복잡도 vs 예측 정확도 트레이드오프 분석 제공**  
-- **AR·자율주행·AI 시대의 차세대 이동통신 기술 발전**에 기여  
+- **LWM 파운데이션 모델의 무선 채널 예측 적용 가능성 검증**  
+- 다양한 사용자 환경에서도 **높은 일반화 성능** 입증  
+- 실제 통신 시스템 적용 시 **정확도 ↔ 연산 복잡도** 트레이드오프 가이드 제공  
+- **AR·자율주행·AI 시대**의 차세대 이동통신 기술 발전에 기여  
+- 향후 연구로 **도메인 적응형 모델(Domain Adaptive Model)** 및  
+  **경량화(Lightweight Fine-tuning)** 전략 개발 가능성 제시  
 
 ---
-
-## 🧩 Repository Structure
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
----
-tags:
-- transformers
-- wireless-communication
-- few-shot-learning
-- limited-data
-- feature-extraction
-- pytorch
-#license: mit
-datasets:
-- DeepMIMO
----
-
-# 📡 **LWM: Large Wireless Model**
-
-**[🚀 Click here to try the Interactive Demo!](https://huggingface.co/spaces/wi-lab/lwm-interactive-demo)**
-
-**[🚀 Click here to try the Colab Notebook!](https://colab.research.google.com/drive/1a_eNi-HG79CY-iwnnlyR41uL8PrG7EIj?usp=sharing)**
-
-LWM is a powerful **pre-trained** model developed as a **universal feature extractor** for wireless channels. As the world's first foundation model crafted for this domain, LWM leverages transformer architectures to extract refined representations from simulated datasets, such as DeepMIMO and Sionna, and real-world wireless data.
-
-<!--
-### 🎥 Watch the tutorial
-
-Check out this tutorial video to see the model in action! Click on the thumbnail below to watch it on YouTube.
-
-[![Watch the tutorial](https://img.youtube.com/vi/YOUTUBE_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUTUBE_VIDEO_ID)
-
-*In this video, we walk through the LWM paper, explain how the model works, and demonstrate its application for downstream tasks with practical examples. You'll find step-by-step instructions and detailed insights into the model's output.*
--->
-
-### How is LWM built?
-
-The LWM model’s structure is based on transformers, allowing it to capture both **fine-grained and global dependencies** within channel data. Unlike traditional models that are limited to specific tasks, LWM employs a **self-supervised** approach through our proposed technique, Masked Channel Modeling (MCM). This method trains the model on unlabeled data by predicting masked channel segments, enabling it to learn intricate relationships between antennas and subcarriers. Utilizing **bidirectional attention**, LWM interprets the full context by attending to both preceding and succeeding channel segments, resulting in embeddings that encode comprehensive spatial information, making them applicable to a variety of scenarios.
-
-### What does LWM offer?
-
-LWM provides a universal feature extraction framework that can be applied across diverse **wireless communication and sensing** tasks. It is built to handle complex wireless environments, capturing channel characteristics in a way that facilitates robust performance across different scenarios and conditions.
-
-Trained on hundreds of thousands of wireless channel samples, LWM has been designed to generalize across varied environments—from dense urban areas to synthetic setups, ensuring its adaptability and consistency across a broad spectrum of wireless tasks.
-
-### How is LWM used?
-
-LWM is designed to be easily integrated into downstream applications as a source of high-quality **embeddings** that encapsulate complex channel features. By feeding raw wireless channel data into the pre-trained model, users obtain embeddings that capture essential spatial relationships and interactions within the channel environment.
-
-These embeddings provide a versatile and contextualized representation of wireless data, which can be leveraged across different applications. By utilizing the pre-trained model in this way, users can **reduce the need for extensive labeled data** while benefiting from embeddings that retain the critical properties of the original channel.
-
-### Advantages of Using LWM
-
-- **Various Tasks**: Self-supervised and pre-trained without labels, LWM excels in a wide range of wireless tasks, offering flexibility and performance
-- **Limited Data**: With LWM embeddings, downstream tasks achieve high accuracy with less data, cutting reliance on large datasets
-- **Various Environments**: Pre-trained on diverse data, LWM excels in various environments from urban to rural areas, ensuring reliable performance
-
-Join the growing community of researchers using LWM for their wireless communication and sensing research, and unlock a new level of performance and insight in your models!
----
-
-Please cite the following paper if you use the LWM model or any modified parts:
-```
-@misc{alikhani2024largewirelessmodellwm,
-      title={Large Wireless Model (LWM): A Foundation Model for Wireless Channels}, 
-      author={Sadjad Alikhani and Gouranga Charan and Ahmed Alkhateeb},
-      year={2024},
-      eprint={2411.08872},
-      archivePrefix={arXiv},
-      primaryClass={cs.IT},
-      url={https://arxiv.org/abs/2411.08872}, 
-}
-```
-
-## 🛠 **How to Use**
-
-### 1. **Install Conda**
-
-First, ensure that you have a package manager like **Conda** installed to manage your Python environments and packages. You can install **Conda** via **Anaconda** or **Miniconda**.
-
-- **Anaconda** includes a comprehensive scientific package suite. Download it [here](https://www.anaconda.com/products/distribution).
-- **Miniconda** is a lightweight version that includes only Conda and Python. Download it [here](https://docs.conda.io/en/latest/miniconda.html).
-
-Once installed, you can use Conda to manage environments.
-
----
-
-### 2. **Create a New Environment**
-
-After installing Conda, follow these steps to create a new environment and install the required packages.
-
-#### **Step 1: Create a new environment**
-
-To begin, open the **Anaconda PowerShell Prompt** and create a new Conda environment named `lwm_env`:
-
-```bash
-conda create -n lwm_env
-```
-
-#### **Step 2: Activate the environment**
-
-Activate the environment:
-
-```bash
-conda activate lwm_env
-```
-
----
-
-### 3. **Install Required Packages**
-
-Once the environment is activated, install the necessary packages.
-
-#### **Install CUDA-enabled PyTorch**
-
-Although inference can run efficiently on a CPU, you may need a GPU for training more resource-intensive downstream tasks. Visit [this page](https://pytorch.org/get-started/locally/) and select the appropriate options based on your system's specifications. The website will generate a tailored installation command.
-
-For instance, on an NVIDIA system, you can use a command like the following with the appropriate CUDA version for your system:
-
-```bash
-conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
-```
-
-This command installs PyTorch with CUDA support for GPU-accelerated training. Ensure that the specified CUDA version is compatible with your system, adjusting it if necessary.
-
-> **Note:** If you encounter issues installing CUDA-enabled PyTorch, verify your CUDA version compatibility. It might also be due to conflicting installation attempts—try a fresh environment.
-
-#### **Install Other Required Packages via Conda Forge**
-
-```bash
-conda install python numpy pandas matplotlib tqdm -c conda-forge
-```
-
-#### **Install DeepMIMOv3 with pip**
-
-```bash
-pip install DeepMIMOv3
-```
-
----
-
-### 4. **Clone the Dataset Scenarios**
-
-The following functions will help you clone specific dataset scenarios from a repository:
-
-```python
-import subprocess
-import os
-import shutil
-
-def clone_dataset_scenario(repo_url, model_repo_dir="./LWM", scenarios_dir="scenarios"):
-    """
-    Clones all scenarios from a repository, ensuring all files (small and large) are downloaded.
-
-    Args:
-        repo_url (str): URL of the Git repository
-        model_repo_dir (str): Path to the model repository
-        scenarios_dir (str): Directory name for storing scenarios
-    """
-    # Ensure we're in the correct directory structure
-    current_dir = os.path.basename(os.getcwd())
-    if current_dir == "LWM":
-        model_repo_dir = "."
-
-    # Create the scenarios directory if it doesn't exist
-    scenarios_path = os.path.join(model_repo_dir, scenarios_dir)
-    os.makedirs(scenarios_path, exist_ok=True)
-
-    # Store the original working directory
-    original_dir = os.getcwd()
-
-    try:
-        # Clean up any existing temp directory
-        if os.path.exists(scenarios_path):
-            shutil.rmtree(scenarios_path)
-
-        # Clone the entire repository (including all files)
-        print(f"Cloning entire repository into temporary directory...")
-        subprocess.run([
-            "git", "clone",
-            repo_url,
-            scenarios_path
-        ], check=True)
-
-        # Navigate to the temporary clone directory
-        os.chdir(scenarios_path)
-
-        # Pull all files using Git LFS
-        print(f"Pulling all files using Git LFS...")
-        subprocess.run(["git", "lfs", "install"], check=True)  # Ensure LFS is installed
-        subprocess.run(["git", "lfs", "pull"], check=True)  # Pull all LFS files
-
-        print(f"Successfully cloned all scenarios into {scenarios_path}")
-
-    except subprocess.CalledProcessError as e:
-        print(f"Error cloning scenarios: {str(e)}")
-    finally:
-        # Clean up temporary directory
-        if os.path.exists(scenarios_path):
-            shutil.rmtree(scenarios_path)
-        # Return to original directory
-        os.chdir(original_dir)
-```
-
----
-
-### 5. **Clone the Model Repository**
-
-Now, clone the **LWM** model repository to your local system.
-
-```bash
-# Step 1: Clone the model repository (if not already cloned)
-model_repo_url = "https://huggingface.co/wi-lab/lwm"
-model_repo_dir = "./LWM"
-
-if not os.path.exists(model_repo_dir):
-    print(f"Cloning model repository from {model_repo_url}...")
-    subprocess.run(["git", "clone", model_repo_url, model_repo_dir], check=True)
-```
-
----
-
-### 6. **Clone the Desired Dataset Scenarios**
-
-You can now clone specific scenarios from the DeepMIMO dataset, as detailed in the table below:
-
-📊 **Dataset Overview**
-
-| 📊 **Dataset** | 🏙️ **City**         | 👥 **Number of Users** | 🔗 **DeepMIMO Page**                                                                                       |
-|----------------|----------------------|------------------------|------------------------------------------------------------------------------------------------------------|
-| Dataset 0      | 🌆 Denver             | 1354                   | [DeepMIMO City Scenario 18](https://www.deepmimo.net/scenarios/deepmimo-city-scenario18/)                   |
-| Dataset 1      | 🏙️ Indianapolis       | 3248                   | [DeepMIMO City Scenario 15](https://www.deepmimo.net/scenarios/deepmimo-city-scenario15/)                   |
-| Dataset 2      | 🌇 Oklahoma           | 3455                   | [DeepMIMO City Scenario 19](https://www.deepmimo.net/scenarios/deepmimo-city-scenario19/)                   |
-| Dataset 3      | 🌆 Fort Worth         | 1902                   | [DeepMIMO City Scenario 12](https://www.deepmimo.net/scenarios/deepmimo-city-scenario12/)                   |
-| Dataset 4      | 🌉 Santa Clara        | 2689                   | [DeepMIMO City Scenario 11](https://www.deepmimo.net/scenarios/deepmimo-city-scenario11/)                   |
-| Dataset 5      | 🌅 San Diego          | 2192                   | [DeepMIMO City Scenario 7](https://www.deepmimo.net/scenarios/deepmimo-city-scenario7/)                     |
-
-It is important to note that these six datasets were **not** used during the pre-training of the LWM model, and the high-quality embeddings produced are a testament to LWM’s robust generalization capabilities rather than overfitting.
-
-The operational settings below were used in generating the datasets for both the pre-training of LWM and the downstream tasks. If you intend to use custom datasets, please ensure they adhere to these configurations:
-
-#### **Operational Settings**:
-- *Antennas at BS*: 32
-- *Antennas at UEs*: 1
-- *Subcarriers*: 32
-- *Paths*: 20
-- *Frequency*: 3.5GHz (By the way, our results are consistent across different frequency ranges.)
-  
-#### **Clone the Scenarios:**
-```python
-import numpy as np
-dataset_repo_url = "https://huggingface.co/datasets/wi-lab/lwm"  # Base URL for dataset repo
-
-# Clone the requested scenarios
-clone_dataset_scenario(dataset_repo_url, model_repo_dir)
-```
-
----
-
-### 7. **Change the Working Directory to LWM**
-
-```bash
-if os.path.exists(model_repo_dir):
-    os.chdir(model_repo_dir)
-    print(f"Changed working directory to {os.getcwd()}")
-else:
-    print(f"Directory {model_repo_dir} does not exist. Please check if the repository is cloned properly.")
-```
-
----
-
-### 8. **Tokenize and Load the Model**
-
-Before we dive into tokenizing the dataset and loading the model, let's understand how the tokenization process is adapted to the wireless communication context. In this case, **tokenization** refers to segmenting each wireless channel into patches, similar to how Vision Transformers (ViTs) work with images. Each wireless channel is structured as a 32x32 matrix, where rows represent antennas and columns represent subcarriers.
-
-The tokenization process involves **dividing the channel matrix into patches**, with each patch containing information from 16 consecutive subcarriers. These patches are then **embedded** into a 64-dimensional space, providing the Transformer with a richer context for each patch. In this process, **positional encodings** are added to preserve the structural relationships within the channel, ensuring the Transformer captures both spatial and frequency dependencies.
-
-If you choose to apply **Masked Channel Modeling (MCM)** during inference (by setting `gen_raw=False`), LWM will mask certain patches, as it did during pre-training. However, for standard inference, masking isn't necessary unless you want to test LWM's robustness to noisy inputs! The printed LWM loss after inference could show you how well it has predicted the masked patches.
-
-Now, let's move on to tokenize the dataset and load the pre-trained LWM model.
-
-```python
-from input_preprocess import tokenizer
-from lwm_model import lwm
-import torch
-
-scenario_names = np.array([
-    "city_18_denver", "city_15_indianapolis", "city_19_oklahoma", 
-    "city_12_fortworth", "city_11_santaclara", "city_7_sandiego"
-])
-scenario_idxs = np.array([0, 1, 2, 3, 4, 5])  # Select the scenario indexes
-selected_scenario_names = scenario_names[scenario_idxs]
-
-preprocessed_chs = tokenizer(
-    selected_scenario_names=selected_scenario_names,  # Selects predefined DeepMIMOv3 scenarios. Set to None to load your own dataset.
-    manual_data=None,  # If using a custom dataset, ensure it is a wireless channel dataset of size (N,32,32) based on the settings provided above.
-    gen_raw=True  # Set gen_raw=False to apply masked channel modeling (MCM), as used in LWM pre-training. For inference, masking is unnecessary unless you want to evaluate LWM's ability to handle noisy inputs.
-)
-
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-print(f"Loading the LWM model on {device}...")
-model = lwm.from_pretrained(device=device)
-```
-
-With this setup, you're ready to pass your tokenized wireless channels through the pre-trained model, extracting rich, context-aware embeddings that are ready for use in downstream tasks.
-
----
-
-### 9. **Perform Inference**
-
-Before running the inference, it's important to understand the benefits of the different embedding types. The **CLS embeddings (cls_emb)** provide a highly compressed, holistic view of the entire wireless channel, making them ideal for tasks requiring a general understanding, such as classification or high-level decision-making. On the other hand, **channel embeddings (channel_emb)** capture detailed spatial and frequency information from the wireless channel, making them more suitable for complex tasks like beamforming or channel prediction.
-
-You can now perform inference on the preprocessed data using the LWM model.
-
-```python
-from inference import lwm_inference, create_raw_dataset
-input_types = ['cls_emb', 'channel_emb', 'raw']
-selected_input_type = input_types[1]  # Change the index to select LWM CLS embeddings, LWM channel embeddings, or the original input channels.
-
-if selected_input_type in ['cls_emb', 'channel_emb']:
-    dataset = lwm_inference(preprocessed_chs, selected_input_type, model, device)
-else:
-    dataset = create_raw_dataset(preprocessed_chs, device)
-```
-
-By selecting either `cls_emb` or `channel_emb`, you leverage the pre-trained model's rich feature extraction capabilities to transform raw channels into highly informative embeddings. If you prefer to work with the original raw data, you can choose the `raw` input type.
-
----
-
-### 10. **Generate Labels if Necessary**
-If your dataset requires labels, you can easily generate them using DeepMIMO data. Here's an example to create labels for either LoS/NLoS classification or beam prediction, depending on the scenario selected:
-```python
-from input_preprocess import create_labels
-tasks = ['LoS/NLoS Classification', 'Beam Prediction']
-task = tasks[1] # Choose 0 for LoS/NLoS labels or 1 for beam prediction labels.
-labels = create_labels(task, selected_scenario_names, n_beams=64) # For beam prediction, n_beams specifies the number of beams in the codebook. If you're generating labels for LoS/NLoS classification, you can leave this value unchanged as it doesn't impact the label generation.
-```
-
----
-
-### 11. **Leverage the Dataset for Downstream Tasks**
-
-LWM, pre-trained on a vast and diverse dataset using self-supervised learning, does not rely on labeled data. During inference, it transforms raw channels into rich embeddings in real time, capturing both general and intricate patterns within the wireless channels. These embeddings can be directly applied to various downstream tasks, offering a more powerful alternative to using the original channel data.
-
----
-
-### 12. **Explore the Interactive Demo**
-
-To experience **LWM** interactively, visit our demo hosted on Hugging Face Spaces:
-
-[**Try the Interactive Demo!**](https://huggingface.co/spaces/wi-lab/lwm-interactive-demo)
-
----
-
-You are now ready to explore the power of **LWM** in wireless communications! Start processing datasets and generate high-quality embeddings to advance your research or applications.
-
-If you have questions or need assistance, feel free to:
-- Visit the [Hugging Face Discussions](https://huggingface.co/wi-lab/lwm/discussions) for community support.
-- Check out the [LWM website FAQ](https://lwm-wireless.net/community).
-- Contact us directly via email at [lwmwireless@gmail.com](mailto:lwmwireless@gmail.com).
-
 
