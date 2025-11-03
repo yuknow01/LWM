@@ -2,7 +2,7 @@
 ### Next-Generation Wireless Channel Prediction using Large Wireless Model (LWM)
 
 > **충남대학교 2025 창의SW·AI 축전 창의작품경진대회 출품작**  
-> 참가 부문: 학술 / 개발과제  
+> 참가 부문: 학술  
 > 팀명: **LWM**  
 > 지도교수: **양희철 교수님**
 
@@ -240,22 +240,44 @@ class LWMWithHead(nn.Module):
 ---
 
 ## 📊 실험 결과 (Results)
+![LWM NMSE 성능평가](https://github.com/yuknow01/LWM/blob/main/%EC%84%B1%EB%8A%A5%ED%8F%89%EA%B0%80.png)
 
-| 분할 기준 | 최적 모델 | NMSE(dB) | 주요 특징 |
-|------------|------------|-----------|-------------|
-| **User Split** | GRU | **–23.40 dB** | 사용자 기반 일반화 우수 |
-| **Scene Split** | LWM_Finetune | –24.30 dB | 시간적 변화에 강건 |
-| **Subcarrier Split** | LWM_Finetune | **–25.71 dB** | 주파수 도메인 적응력 최고 |
+> NMSE(dB)는 **값이 더 작을수록(더 음수)** 좋습니다. (아래 수치는 반올림)
 
-### 🔹 세부 분석
-- **GRU**는 시계열 특화 구조로 사용자 기반 예측(User Split)에서 우수한 성능을 보임.  
-- **LWM**은 소량의 데이터(0.5~1%)에서도 **데이터 효율성(Data Efficiency)** 이 높음.  
-- **추론 시간(1 sample 기준):**  
-  - GRU: 약 **0.85–0.91 ms/sample**  
-  - LWM: 약 **14.5–16.5 ms/sample**  
-  → LWM은 느리지만 **일반화 성능과 예측 안정성**에서 크게 앞섬.
+| 분할 기준 | 최적 모델 | NMSE(dB) | 해석 |
+|---|---:|:--:|---|
+| **User Split** | **GRU** | **-23.40** | 사용자 ID가 바뀌어도 일반화가 가장 좋음 |
+| **Scene Split** | **LWM_Finetune** | **≈ -18.24** | 시간축(장면 변화) 분리에 가장 강건 |
+| **Subcarrier Split** | **LWM_FromScratch** | **-25.71** | 주파수 도메인 변화에 최적 |
+
+### 분할별 코멘트
+- **User Split**: RNN 계열(특히 **GRU**) 우세 → **개별 사용자 일반화** 강함.  
+- **Scene Split**: **사전학습 백본 미세조정(LWM_Finetune)**이 최고 → **시간적 분포 이동**에 robust.  
+- **Subcarrier Split**: **LWM_FromScratch**가 최고, **LWM_Finetune** 차순위 → **주파수 도메인 적응력** 우수.
 
 ---
+
+### 📊 추가 실험 — 유저 분할(학습 사용자 비율)
+![LWM NMSE 유저분할](https://github.com/yuknow01/LWM/blob/main/%EC%B6%94%EA%B0%80%20%EC%84%B1%EB%8A%A5%ED%8F%89%EA%B0%80%20%EC%9C%A0%EC%A0%80%EB%B6%84%ED%95%A0.png)
+
+- **≤ 1% (저데이터)**: **LWM_FromScratch** 선도 → **데이터 효율성** 강점  
+- **3–30%**: **RNN**이 구간별 최고치 다수  
+- **≥ 50%**: **GRU** 최상 성능
+
+---
+
+### ⚡ 추론 시간 & 파라미터
+![inference 및 parameters](https://github.com/yuknow01/LWM/blob/main/inference%20%EB%B0%8F%20parameters.png)
+
+- **RNN 계열**: ≈ **0.85–0.91 ms/sample**, **≤ 0.10M** params → **빠르고 가벼움**  
+- **LWM 계열**: ≈ **14.5–16.5 ms/sample**, **~0.61M** params → 느리지만 **Scene/Subcarrier 적응력** 우수
+
+---
+
+### ✅ 한 줄 요약
+**사용자 일반화 → GRU**, **시간 변화 → LWM_Finetune**, **주파수 변화 → LWM_FromScratch**.  
+**속도/경량성은 RNN·GRU**, **도메인 적응·저데이터 효율은 LWM**이 강점.
+
 
 ## 💡 기대 효과 (Expected Impact)
 
@@ -267,5 +289,6 @@ class LWMWithHead(nn.Module):
   **경량화(Lightweight Fine-tuning)** 전략 개발 가능성 제시  
 
 ---
+
 
 
