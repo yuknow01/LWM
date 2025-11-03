@@ -1,3 +1,110 @@
+# 🚀 AR·자율주행·AI 시대를 위한 차세대 이동통신 예측 기술  
+### Next-Generation Wireless Channel Prediction using Large Wireless Model (LWM)
+
+> **충남대학교 2025 창의SW·AI 축전 창의작품경진대회 출품작**  
+> 참가 부문: 학술 / 개발과제  
+> 팀명: **LWM**  
+> 지도교수: 양희철 교수님  
+
+---
+
+## 📘 개요 (Overview)
+
+본 프로젝트는 초고속 이동통신 환경에서 발생하는 **채널 에이징(Channel Aging)** 문제를 해결하기 위해  
+**거대무선모델(Large Wireless Model, LWM)** 기반 트랜스포머를 적용한  
+**무선 채널 시계열 예측(Sequential Channel Prediction)** 기술을 제시합니다.
+
+LWM은 채널 마스킹(Masked Channel Modeling, MCM) 방식으로 사전 학습된  
+**파운데이션 모델(Foundation Model)** 구조를 기반으로 하며,  
+RNN 계열(RNN, GRU, LSTM) 및 일반 Transformer 모델과 **NMSE(dB)** 기준으로 성능을 비교하였습니다.
+
+---
+
+## 🎯 연구 목표 (Objective)
+
+- **채널 에이징 문제 해결:** 시간 변화에 따른 예측 정확도 저하 개선  
+- **LWM Transformer 백본 적용:** 대규모 사전학습 모델을 채널 예측에 도입  
+- **성능 비교:** RNN, GRU, LSTM, Transformer vs LWM  
+- **데이터 분할 실험:** 사용자 / 장면 / 서브캐리어 기준 분할  
+- **전이학습(Transfer Learning) 전략 비교:**
+  1. `LWM_Finetune`: 사전학습된 백본 + 미세조정  
+  2. `LWM_Freeze`: 백본 동결 후 출력 헤드만 학습  
+  3. `LWM_FromScratch`: 사전학습 없이 처음부터 학습  
+
+---
+
+## 🧠 모델 구조 (Model Architecture)
+- Input → Projection → Patch/Positional Embedding → LWM Backbone → Output Head → Prediction
+
+
+- **Dataset:** DeepMIMO v3 Dynamic Scenario  
+- **Metric:** NMSE(dB)  
+- **Framework:** PyTorch  
+- **Evaluation Splits:** User / Scene / Subcarrier  
+
+---
+
+## ⚙️ 세부 실험 내용 (Experiment Details)
+
+LWM은 **DeepMIMO v3** 데이터셋을 기반으로,  
+사전학습된 Transformer 백본을 활용한 시계열 채널 예측 실험을 진행했습니다.  
+각 실험은 동일한 전처리, 학습 조건, 평가 지표(NMSE(dB))를 사용했습니다.
+
+### 🔹 학습 전략별 구성
+| 전략 | 설명 |
+|------|------|
+| **LWM_Finetune** | 사전학습된 백본 사용 + 미세조정 |
+| **LWM_Freeze** | 백본 동결 후 출력 레이어만 학습 |
+| **LWM_FromScratch** | 사전학습 없이 처음부터 학습 |
+
+---
+
+## 📊 실험 결과 (Results)
+
+| 분할 방식 | 최적 모델 | NMSE(dB) | 주요 특징 |
+|------------|------------|-----------|-------------|
+| **서브캐리어 분할** | LWM_Finetune | **–25.7078 dB** | 주파수 축 일반화 능력 우수 |
+| **장면 분할** | LWM_Finetune | –24.3 dB | 환경 변화에 대한 강건성 |
+| **사용자 분할** | GRU | –23.3986 dB | 시계열 데이터 적응력 우수 |
+
+### 🔹 추가 분석
+- **데이터 희소 구간 (0.5%~1%)**에서는 LWM이 RNN보다 오히려 **더 높은 효율성**을 보임.  
+- **추론 시간(1 sample 기준)**  
+  - GRU: 약 **0.85~0.91 ms/sample**  
+  - LWM: 약 **14.53~16.51 ms/sample**  
+  → LWM은 느리지만 **데이터 효율성 및 일반화 성능에서 우수함**을 확인.  
+
+---
+
+## 💡 기대 효과 (Expected Impact)
+
+- LWM 기반 파운데이션 모델의 **무선 채널 예측 분야 적용 가능성 검증**  
+- 실제 통신 시스템 적용 시 **연산 복잡도 vs 예측 정확도 트레이드오프 분석 제공**  
+- **AR·자율주행·AI 시대의 차세대 이동통신 기술 발전**에 기여  
+
+---
+
+## 🧩 Repository Structure
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ---
 tags:
 - transformers
@@ -10,17 +117,6 @@ tags:
 datasets:
 - DeepMIMO
 ---
-# Schedule
-- 2025-8-29 meeting 15:00
-
-# Homework
-- organize README.md and analyze the dataset size and shape etc
-
-- Transformer change the layer 12 -> 6
-- compare the model performance which similar the trainable parameters
-- to make the scene prediction which is 4 train to 5 predict and 14 train and 15 predicct also 10 to 11
-- to make same the train validation ratio
-
 
 # 📡 **LWM: Large Wireless Model**
 
@@ -364,4 +460,5 @@ If you have questions or need assistance, feel free to:
 - Visit the [Hugging Face Discussions](https://huggingface.co/wi-lab/lwm/discussions) for community support.
 - Check out the [LWM website FAQ](https://lwm-wireless.net/community).
 - Contact us directly via email at [lwmwireless@gmail.com](mailto:lwmwireless@gmail.com).
+
 
