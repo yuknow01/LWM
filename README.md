@@ -165,6 +165,9 @@ val_sc   = set(sc_ids[cut:])
 Input → Projection → Patch/Positional Embedding → LWM Backbone → Output Head → Prediction
 ![LWM Architecture](https://github.com/yuknow01/LWM/blob/main/LWM_architecture.png?raw=true)
 
+Split1은 가중치를 사용하는 LWM_Finetune, LWM_Freeze
+split2는 가중치를 사용하지 않는 LWM_FromScratch 및 RNN 계열 딥러닝 모델들 입니다.
+
 ## ⚙️ 코드 구조 (Code)
 
 ```python
@@ -289,6 +292,7 @@ class LWMWithHead(nn.Module):
   **경량화(Lightweight Fine-tuning)** 전략 개발 가능성 제시  
 
 ---
+
 
 
 
