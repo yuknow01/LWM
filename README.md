@@ -30,31 +30,40 @@ RNN/GRU/LSTM/일반 Transformer와 **NMSE(dB)** 기준 성능을 비교했습니
   2) **LWM_Freeze**: 백본 동결, 출력 헤드만 학습  
   3) **LWM_FromScratch**: 사전학습 없이 처음부터 학습
 
+
 ---
 
-## 🧠 모델 구조 (Model Architecture)
-
-**Input → Projection → Patch/Positional Embedding → LWM Backbone → Output Head → Prediction**
-
+### 🧪 실험 데이터 (Dataset) 요약
 | 항목 | 값 |
 |---|---|
-| **Dataset** | DeepMIMO v3 Dynamic Scenario (`O2_dyn_3p5`) |
-| **Metric** | NMSE (dB) |
-| **Framework** | PyTorch |
-| **Evaluation Splits** | User / Scene / Subcarrier |
-| **Sequence Length** | 14 (과거 14 → 다음 1 예측) |
+| 시나리오 | **O2_dyn_3p5** (O2 Dynamic, Sub-6 GHz) |
+| 지형/레이아웃 | 도심 도로 + 교차로(동적 환경) |
+| 기지국 수 | 2 (BS#1, BS#2) |
+| 후보 사용자 | ≈ 115,000 (격자) |
+| 시간 샘플 간격 | 100 ms *(문서 기준)* |
+| 총 장면 수 | ≈ 1,000 scenes *(문서 기준)* |
+| 주파수 | 3.5 GHz |
+| 제공 데이터 | OFDM **서브캐리어별 주파수-도메인 CSI**(복소 채널 계수) |
 
----
+이후 대역폭, 서브캐리어 수, 안테나 배열, 경로 수 등은 실험 목적에 맞게 아래에서 설정
 
-## ⚙️ 실험 데이터 (Dataset)
+```python
+scene = 각 데이터 분할에 맞게 설정
+parameters['dataset_folder'] = '/home/dlghdbs200/LWM/scenarios'
+parameters['scenario'] = 'O2_dyn_3p5'
+parameters['dynamic_scenario_scenes'] = np.arange(scene)
+parameters['num_paths'] = 10
+parameters['user_rows'] = np.arange(100)
+parameters['user_subsampling'] = 0.01
+parameters['active_BS'] = np.array([1])
+parameters['activate_OFDM'] = 1
+parameters['OFDM']['bandwidth'] = 0.05
+parameters['OFDM']['subcarriers'] = 512
+parameters['OFDM']['selected_subcarriers'] = np.arange(0, 64, 1)
+parameters['ue_antenna']['shape'] = np.array([1, 1])
+parameters['bs_antenna']['shape'] = np.array([1, 32])
 
-DeepMIMO v3의 `O2_dyn_3p5` 동적 시나리오를 사용했습니다.
-
-| 항목 | 설명 |
-|---|---|
-| 송신 안테나(BS) | 32 |
-| 서브캐리어 | 64 |
-| 사용자(UE) | 737 (예시) |
+```
 
 ---
 
@@ -71,6 +80,21 @@ split_idx = 26  # 예: 총 44개 Scene → 0~25 Train / 26~43 Val
 train_ds = dataset[:split_idx]
 val_ds   = dataset[split_idx:]
 ```
+### 🧍‍♂️ Table 1. 사용자 단위 분할 파라미터
+| Parameter | Value |
+|------------|-------|
+| Total Scene (N_scene) | 30 |
+| Users (U_total) | 727 |
+| Train users (U_train) | 545 |
+| Validation users (U_val) | 182 |
+| Sequence length (T) | 14 |
+| Prediction horizon (h) | 1 |
+| Number of valid sequence (M) | 16 |
+| Subcarrier (S) | 64 |
+| Train samples | 558,080 |
+| Validation samples | 186,368 |
+
+---
 
 ### 2) user split (user 기반)
 유저를 3:1로 분할하고 train에 대해서 추가적으로 아래 더 학습 사용자 비율로 분할 합니다.
@@ -93,6 +117,22 @@ train_users = set(user_ids[:cut_50pt])
 val_users   = set(user_ids[cut:])
 ```
 
+### 🌆 Table 2. 장면 단위 분할 파라미터
+| Parameter | Value |
+|------------|-------|
+| Total Scene (N_scene) | 44 |
+| User (U) | 727 |
+| Train scene | 26 |
+| Validation scene | 18 |
+| Sequence length (T) | 14 |
+| Prediction horizon (h) | 1 |
+| Train sequence (M_train) | 12 |
+| Validation sequence (M_val) | 4 |
+| Subcarrier (S) | 64 |
+| Train samples | 566,016 |
+| Validation samples | 188,672 |
+
+
 ### 3) subcarrier Split (서브캐리어 분할)
 캐리어를 64개로 분할 한 후 train : val = 3 : 1로 분할하였습니다.
 ``` pyhton
@@ -106,10 +146,24 @@ cut = int(S * 0.75)
 train_sc = set(sc_ids[:cut])
 val_sc   = set(sc_ids[cut:])
 ```
+### 📡 Table 3. 서브캐리어 단위 분할 파라미터
+| Parameter | Value |
+|------------|-------|
+| Total Scene (N_scene) | 30 |
+| User (U) | 727 |
+| Total subcarrier (S) | 64 |
+| Train subcarrier (S_train) | 48 |
+| Validation subcarrier (S_val) | 16 |
+| Sequence length (T) | 14 |
+| Prediction horizon (h) | 1 |
+| Number of valid sequence (M) | 16 |
+| Train samples | 566,016 |
+| Validation samples | 188,672 |
+
 ---
 # 🧠 LWM 모델 구조
 Input → Projection → Patch/Positional Embedding → LWM Backbone → Output Head → Prediction
-
+![LWM Architecture](https://github.com/yuknow01/LWM/blob/main/LWM_architecture.png?raw=true)
 
 ## ⚙️ 코드 구조 (Code)
 
@@ -176,7 +230,7 @@ class LWMWithHead(nn.Module):
 
 | 전략명 | 설명 | 학습 범위 |
 |--------|------|-----------|
-| **LWM_Finetune** | 사전학습된 백본을 불러와 전체 파라미터를 미세조정 (Full Fine-tuning) | 백본 + 출력 헤드 |
+| **LWM_Finetune** | 사전학습된 백본을 불러와 전체 파라미터를 미세조정 (Full Fine-tuning) | 투영 + 백본 + 출력 헤드 |
 | **LWM_Freeze** | 사전학습된 백본을 동결하고, 출력 레이어(헤드)만 학습 | 출력 헤드만 |
 | **LWM_FromScratch** | 사전학습 없이 처음부터 모델을 학습 | 전층 |
 
@@ -213,4 +267,5 @@ class LWMWithHead(nn.Module):
   **경량화(Lightweight Fine-tuning)** 전략 개발 가능성 제시  
 
 ---
+
 
